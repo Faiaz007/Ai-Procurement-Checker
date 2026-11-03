@@ -20,12 +20,13 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 import traceback
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 _ROOT = Path(__file__).resolve().parent
@@ -96,7 +97,7 @@ def run_evaluation(no_cache: bool = False) -> None:
     pdfs = sorted(_PDF_DIR.glob("*.pdf"))
     print(f"\nEvaluating {len(pdfs)} PDFs …\n")
 
-    for pdf in pdfs:
+    for idx, pdf in enumerate(pdfs):
         name = pdf.name
         expected = EXPECTED.get(name, "?")
         cached = None if no_cache else _load_cache(pdf)
@@ -132,6 +133,12 @@ def run_evaluation(no_cache: bool = False) -> None:
         )
         status = "✓" if correct else "✗"
         print(f"  {status} {name:<30} expected={expected:<16} got={decision} {source}")
+
+        # Cooldown to stay within Groq free-tier rate limits (1000 output
+        # tokens/minute).  Each extraction emits large JSON with verbatim
+        # quotes (~700-800 output tokens), so we must wait ~60s between calls.
+        if idx < len(pdfs) - 1:
+            time.sleep(65)
 
     # ── Score ──────────────────────────────────────────────────────────────────
     correct_count = sum(1 for r in rows if r["correct"])

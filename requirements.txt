@@ -3,5 +3,5 @@ pydantic
 pymupdf
 pytest
 python-dotenv
-google-genai
+groq
 streamlit

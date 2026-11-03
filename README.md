@@ -27,7 +27,7 @@ PDF ──► [Extract fields via Gemini]
 ```
 
 The graph is built with **LangGraph** as a fixed sequence of nodes.
-Extraction uses **Gemini** (via `google-genai`) in structured JSON mode
+Extraction uses **Groq** (via the `groq` SDK) in JSON mode
 so the output always conforms to the Pydantic schema – no markdown-fence
 crashes, no parsing guesswork.
 
@@ -54,7 +54,7 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env and add your GEMINI_API_KEY from https://aistudio.google.com/
+# Edit .env and add your GROQ_API_KEY from https://console.groq.com/
 ```
 
 ---
@@ -95,7 +95,7 @@ pytest tests/ -v
 app/
   extraction/
     schema.py        Pydantic model for supplier documents
-    extract.py       Gemini extraction with retries + JSON mode
+    extract.py       Groq extraction with retries + JSON mode
   ingestion/
     pdf_reader.py    PyMuPDF text extraction
   rules/
@@ -122,7 +122,7 @@ results.md           Accuracy table + confusion matrix (created by evaluate.py)
 
 | Decision | Rationale |
 |---|---|
-| `google-genai` + JSON mode | Eliminates markdown-fence crashes; response always matches the Pydantic schema |
+| `groq` SDK + JSON mode | Eliminates markdown-fence crashes; response always matches the Pydantic schema |
 | `delivery_value` + `delivery_unit` | Prevents the LLM from silently converting "4 weeks" → 28 days wrong |
 | `has_penalty_clause: Optional[bool]` | Distinguishes "clause absent" (→ Reject) from "model unsure" (→ Review) |
 | TIN/BIN regex validation | Prevents "Registration on request" strings from passing as valid identifiers |

@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import streamlit as st
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -142,12 +142,12 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### About")
     st.markdown(
-        "AI pipeline built with **LangGraph** + **Gemini 2.0 Flash**.\n\n"
+        "AI pipeline built with **LangGraph** + **Groq**.\n\n"
         "Steps: Extract → Verify → Rules → Decision"
     )
     st.markdown("---")
     st.markdown("### Pipeline nodes")
-    for step in ["📄 Ingestion (PyMuPDF)", "🤖 Extraction (Gemini)", "🔍 Verification", "⚖️ Rule Engine", "🚨 Human Review (if needed)"]:
+    for step in ["📄 Ingestion (PyMuPDF)", "🤖 Extraction (Groq)", "🔍 Verification", "⚖️ Rule Engine", "🚨 Human Review (if needed)"]:
         st.markdown(f"- {step}")
 
 
@@ -199,7 +199,7 @@ if uploaded:
             html += f'<div class="step step-wait">◦ {s}</div>'
         step_placeholder.markdown(html, unsafe_allow_html=True)
 
-    all_steps = ["Ingestion", "Extraction (Gemini)", "Verification", "Rule Engine"]
+    all_steps = ["Ingestion", "Extraction (Groq)", "Verification", "Rule Engine"]
 
     try:
         # Build graph lazily (cached after first load)
@@ -210,10 +210,10 @@ if uploaded:
 
         graph = get_graph()
 
-        show_steps([], "Ingestion", ["Extraction (Gemini)", "Verification", "Rule Engine"])
+        show_steps([], "Ingestion", ["Extraction (Groq)", "Verification", "Rule Engine"])
         time.sleep(0.3)
 
-        show_steps(["Ingestion"], "Extraction (Gemini)", ["Verification", "Rule Engine"])
+        show_steps(["Ingestion"], "Extraction (Groq)", ["Verification", "Rule Engine"])
 
         t0 = time.time()
         result = graph.invoke({
@@ -228,7 +228,7 @@ if uploaded:
         })
         elapsed = time.time() - t0
 
-        show_steps(["Ingestion", "Extraction (Gemini)", "Verification", "Rule Engine"], "Done ✓", [])
+        show_steps(["Ingestion", "Extraction (Groq)", "Verification", "Rule Engine"], "Done ✓", [])
         time.sleep(0.2)
         step_placeholder.empty()
 

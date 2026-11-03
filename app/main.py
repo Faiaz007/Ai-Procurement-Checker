@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 from app.workflow.graph import build_graph
 
-load_dotenv()
+load_dotenv(override=True)
 
 _PDF_DIR = Path(__file__).resolve().parent.parent / "data" / "supplier_pdf"
 
