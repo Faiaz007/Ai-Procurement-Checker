@@ -1,0 +1,7 @@
+langgraph
+pydantic
+pymupdf
+pytest
+python-dotenv
+google-genai
+streamlit

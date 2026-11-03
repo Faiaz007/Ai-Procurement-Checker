@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+
+# Environment variables (never commit real keys)
+.env
+
+# PDF files (data files, not code)
+data/supplier_pdf/
+*.pdf
+
+# Runtime outputs (cached LLM extractions)
+outputs/
+
+# Streamlit cache
+.streamlit/
+
+# pytest cache
+.pytest_cache/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+Thumbs.db
