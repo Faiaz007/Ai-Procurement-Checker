@@ -15,7 +15,7 @@ from langgraph.graph import END, StateGraph
 
 from app.extraction.extract import extract_fields
 from app.rules.decide import decide
-from app.validation.validate import load_pr, verify_quotes
+from app.validation.validate import find_pr_row, load_pr, verify_quotes
 
 # Absolute path to the PR CSV so the graph works regardless of CWD
 _PR_PATH = Path(__file__).resolve().parents[2] / "data" / "purchase-request.csv"
@@ -36,6 +36,12 @@ class State(TypedDict):
 
 def node_extract(state: State) -> dict:
     text, doc = extract_fields(state["pdf_path"])
+    if doc is not None and not doc.item_code:
+        # Deterministic fallback: infer the item code from the description/unit
+        # when the LLM returns null for the first table column.
+        row = find_pr_row(load_pr(_PR_PATH), doc)
+        if row is not None:
+            doc.item_code = row["Item"]
     return {"text": text, "doc": doc}
 
 
@@ -61,7 +67,7 @@ def node_decide(state: State) -> dict:
             "quotes": ["not found in document"],
         }
     pr = load_pr(_PR_PATH)
-    row = pr.get(state["doc"].item_code)
+    row = find_pr_row(pr, state["doc"])
     decision, reasons, quotes = decide(state["doc"], row)
     return {"decision": decision, "reasons": reasons, "quotes": quotes}
 

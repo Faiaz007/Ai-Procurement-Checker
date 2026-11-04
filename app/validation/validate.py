@@ -15,7 +15,6 @@ _DECISIVE_FIELDS = {
     "unit_price",
     "advance_percent",
     "delivery_value",
-    "has_penalty_clause",
     "penalty_percent_per_week",
     "tin",
     "bin",
@@ -31,6 +30,38 @@ def load_pr(path: Path | str = _DEFAULT_PR) -> dict[str, dict]:
     """Return a dict keyed by Item letter from the purchase-request CSV."""
     with open(path, newline="") as f:
         return {r["Item"]: r for r in csv.DictReader(f)}
+
+
+def find_pr_row(pr: dict[str, dict], doc) -> dict | None:
+    """
+    Find the purchase-request row for an extracted document.
+
+    Prefers the item code, then falls back to an exact/normalised description
+    match, then to a unique unit match.  This keeps the pipeline working when
+    the LLM extracts the description but misses the single-letter item code.
+    """
+    code = (doc.item_code or "").strip().upper()
+    if code in pr:
+        return pr[code]
+
+    description = _norm(doc.description or "").lower()
+    if description:
+        for row in pr.values():
+            row_desc = _norm(row["Description"]).lower()
+            if description == row_desc:
+                return row
+        for row in pr.values():
+            row_desc = _norm(row["Description"]).lower()
+            if description in row_desc or row_desc in description:
+                return row
+
+    unit = _norm(doc.unit or "").lower()
+    if unit:
+        matches = [row for row in pr.values() if _norm(row["Unit"]).lower() == unit]
+        if len(matches) == 1:
+            return matches[0]
+
+    return None
 
 
 def verify_quotes(text: str, doc) -> tuple[bool, str | None]:

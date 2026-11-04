@@ -28,6 +28,9 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 # ── Paths ──────────────────────────────────────────────────────────────────────
 _ROOT = Path(__file__).resolve().parent
 _PDF_DIR = _ROOT / "data" / "supplier_pdf"
@@ -68,7 +71,10 @@ def _load_cache(pdf: Path) -> dict | None:
 
 
 def _save_cache(pdf: Path, result: dict) -> None:
+    doc = result.get("doc")
     data = {
+        "file": pdf.name,
+        "extraction": doc.model_dump() if doc is not None else None,
         "decision": result["decision"],
         "reasons": result.get("reasons", []),
         "quotes": result.get("quotes", []),
@@ -137,7 +143,8 @@ def run_evaluation(no_cache: bool = False) -> None:
         # Cooldown to stay within Groq free-tier rate limits (1000 output
         # tokens/minute).  Each extraction emits large JSON with verbatim
         # quotes (~700-800 output tokens), so we must wait ~60s between calls.
-        if idx < len(pdfs) - 1:
+        # Cached runs make no API calls, so they need no cooldown.
+        if not cached and idx < len(pdfs) - 1:
             time.sleep(65)
 
     # ── Score ──────────────────────────────────────────────────────────────────

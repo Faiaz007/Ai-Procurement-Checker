@@ -49,6 +49,10 @@ EXPECTED_FIELDS = [
 
 # Maps model output synonyms -> canonical SupplierDoc field names.
 _SYNONYMS = {
+    "item": "item_code",
+    "item_no": "item_code",
+    "item_number": "item_code",
+    "itemCode": "item_code",
     "supplier_tin": "tin",
     "supplier_bin": "bin",
     "items[0].unit_price": "unit_price",
@@ -99,10 +103,15 @@ Rules:
   Never convert weeks to days yourself.
 - For TIN: exactly 12 digits.  For BIN: exactly 9 digits.
   Anything else must be null.
-- Set has_penalty_clause to true only when a penalty clause is present,
-  false only when the document explicitly says there is none, and null when silent.
+- item_code is the single letter in the first column under the 'Item' table
+  header (for example the 'C' in the row that starts 'C  Polyester sewing thread').
+- Set has_penalty_clause to true when a late-delivery penalty clause is present.
+  Set it to false when the document has no such clause (including when it is
+  silent on penalties). Use null only when penalty text exists but its meaning
+  is unclear.
 - For every non-null field include the exact verbatim substring from the document
-  in the 'quotes' dictionary mapping field_name -> substring.
+  in the 'quotes' dictionary mapping field_name -> substring. For
+  has_penalty_clause use the penalty clause text as its quote when one exists.
 - vat_rate is a percentage number (e.g. 15, not 0.15).
 - Never guess or infer.
 - Output raw JSON only — no markdown fences, no explanatory text.
@@ -145,6 +154,14 @@ def extract_fields(pdf_path: str | Path) -> tuple[str, SupplierDoc | None]:
             if isinstance(data, dict):
                 data = _normalize_keys(data)
             doc = SupplierDoc.model_validate(data)
+            # If the document contains no penalty clause at all, treat it as an
+            # explicit absence (company rule: no penalty clause -> Reject).
+            if (
+                doc.has_penalty_clause is None
+                and doc.penalty_text is None
+                and doc.penalty_percent_per_week is None
+            ):
+                doc.has_penalty_clause = False
             return text, doc
         except Exception as exc:  # noqa: BLE001
             last_exc = exc

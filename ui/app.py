@@ -139,6 +139,7 @@ with st.sidebar:
     st.markdown("---")
     show_raw = st.checkbox("Show raw PDF text", value=False)
     show_fields = st.checkbox("Show extracted fields", value=True)
+    show_json = st.checkbox("Show extracted JSON", value=False)
     st.markdown("---")
     st.markdown("### About")
     st.markdown(
@@ -298,6 +299,9 @@ if uploaded:
             ]
             rows_html = "".join(_field_row(n, v) for n, v in fields)
             st.markdown(rows_html, unsafe_allow_html=True)
+            if show_json:
+                st.markdown("### 🧾 Extracted JSON")
+                st.json(doc.model_dump())
         elif not doc:
             st.warning("Field extraction failed – document sent to human review.")
 

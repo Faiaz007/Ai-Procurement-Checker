@@ -15,7 +15,10 @@ class SupplierDoc(BaseModel):
     )
     item_code: Optional[str] = Field(
         default=None,
-        description="Single uppercase letter item code (A–E) from the purchase request.",
+        description=(
+            "Single uppercase letter item code (A–E) from the purchase request. "
+            "This is the value in the first column under the 'Item' table header."
+        ),
     )
     description: Optional[str] = Field(
         default=None,
@@ -108,8 +111,9 @@ class SupplierDoc(BaseModel):
         default=None,
         description=(
             "True if the document contains a late-delivery penalty clause. "
-            "False if it explicitly says there is none. "
-            "Null if the document is silent on the matter."
+            "False if the document has no penalty clause (including when it is "
+            "silent on the matter). Null only when the clause text is present "
+            "but you cannot tell whether it is a late-delivery penalty."
         ),
     )
     penalty_percent_per_week: Optional[float] = Field(
