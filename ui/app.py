@@ -160,10 +160,11 @@ st.markdown("---")
 col_upload, col_info = st.columns([1, 1])
 
 with col_upload:
-    uploaded = st.file_uploader(
-        "Drop a supplier PDF here",
+    uploaded_files = st.file_uploader(
+        "Drop supplier PDF(s) here",
         type=["pdf"],
-        help="Upload any supplier-pack-N.pdf",
+        accept_multiple_files=True,
+        help="Upload one or more supplier-pack-N.pdf files",
     )
 
 with col_info:
@@ -182,133 +183,134 @@ with col_info:
 
 st.markdown("---")
 
-if uploaded:
-    # Save to temp file
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-        tmp.write(uploaded.read())
-        tmp_path = tmp.name
+if uploaded_files:
+    for uploaded in uploaded_files:
+        # Save to temp file
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            tmp.write(uploaded.read())
+            tmp_path = tmp.name
 
-    st.markdown(f"### Running pipeline on `{uploaded.name}` …")
-    step_placeholder = st.empty()
+        st.markdown(f"### Running pipeline on `{uploaded.name}` …")
+        step_placeholder = st.empty()
 
-    def show_steps(done: list[str], current: str, waiting: list[str]):
-        html = ""
-        for s in done:
-            html += f'<div class="step step-done">✅ {s}</div>'
-        html += f'<div class="step step-spin">⏳ {current}</div>'
-        for s in waiting:
-            html += f'<div class="step step-wait">◦ {s}</div>'
-        step_placeholder.markdown(html, unsafe_allow_html=True)
+        def show_steps(done: list[str], current: str, waiting: list[str]):
+            html = ""
+            for s in done:
+                html += f'<div class="step step-done">✅ {s}</div>'
+            html += f'<div class="step step-spin">⏳ {current}</div>'
+            for s in waiting:
+                html += f'<div class="step step-wait">◦ {s}</div>'
+            step_placeholder.markdown(html, unsafe_allow_html=True)
 
-    all_steps = ["Ingestion", "Extraction (Groq)", "Verification", "Rule Engine"]
+        all_steps = ["Ingestion", "Extraction (Groq)", "Verification", "Rule Engine"]
 
-    try:
-        # Build graph lazily (cached after first load)
-        @st.cache_resource
-        def get_graph():
-            from app.workflow.graph import build_graph
-            return build_graph()
+        try:
+            # Build graph lazily (cached after first load)
+            @st.cache_resource
+            def get_graph():
+                from app.workflow.graph import build_graph
+                return build_graph()
 
-        graph = get_graph()
+            graph = get_graph()
 
-        show_steps([], "Ingestion", ["Extraction (Groq)", "Verification", "Rule Engine"])
-        time.sleep(0.3)
+            show_steps([], "Ingestion", ["Extraction (Groq)", "Verification", "Rule Engine"])
+            time.sleep(0.3)
 
-        show_steps(["Ingestion"], "Extraction (Groq)", ["Verification", "Rule Engine"])
+            show_steps(["Ingestion"], "Extraction (Groq)", ["Verification", "Rule Engine"])
 
-        t0 = time.time()
-        result = graph.invoke({
-            "pdf_path": tmp_path,
-            "text": "",
-            "doc": None,
-            "ok": True,
-            "fail_field": "",
-            "decision": "",
-            "reasons": [],
-            "quotes": [],
-        })
-        elapsed = time.time() - t0
+            t0 = time.time()
+            result = graph.invoke({
+                "pdf_path": tmp_path,
+                "text": "",
+                "doc": None,
+                "ok": True,
+                "fail_field": "",
+                "decision": "",
+                "reasons": [],
+                "quotes": [],
+            })
+            elapsed = time.time() - t0
 
-        show_steps(["Ingestion", "Extraction (Groq)", "Verification", "Rule Engine"], "Done ✓", [])
-        time.sleep(0.2)
-        step_placeholder.empty()
+            show_steps(["Ingestion", "Extraction (Groq)", "Verification", "Rule Engine"], "Done ✓", [])
+            time.sleep(0.2)
+            step_placeholder.empty()
 
-    except Exception as exc:
-        step_placeholder.empty()
-        st.error(f"Pipeline error: {exc}")
-        st.stop()
+        except Exception as exc:
+            step_placeholder.empty()
+            st.error(f"Pipeline error: {exc}")
+            st.stop()
 
-    decision = result["decision"]
-    reasons  = result.get("reasons", [])
-    quotes   = result.get("quotes", [])
-    doc      = result.get("doc")
+        decision = result["decision"]
+        reasons  = result.get("reasons", [])
+        quotes   = result.get("quotes", [])
+        doc      = result.get("doc")
 
-    # ── Decision banner ────────────────────────────────────────────────────────
-    st.markdown("---")
-    st.markdown(f"## Decision: {_decision_badge(decision)}", unsafe_allow_html=True)
-    st.caption(f"Pipeline completed in {elapsed:.1f}s")
-    st.markdown("")
+        # ── Decision banner ────────────────────────────────────────────────────────
+        st.markdown("---")
+        st.markdown(f"## Decision: {_decision_badge(decision)}", unsafe_allow_html=True)
+        st.caption(f"Pipeline completed in {elapsed:.1f}s")
+        st.markdown("")
 
-    # ── Metrics ───────────────────────────────────────────────────────────────
-    mc1, mc2, mc3 = st.columns(3)
-    mc1.metric("Total findings", len(reasons))
-    mc2.metric("Reject findings", sum(1 for r in reasons if "Reject" in decision or "reject" in r.lower()))
-    mc3.metric("Review flags", sum(1 for r in reasons if "review" in r.lower() or "unclear" in r.lower() or "missing" in r.lower()))
+        # ── Metrics ───────────────────────────────────────────────────────────────
+        mc1, mc2, mc3 = st.columns(3)
+        mc1.metric("Total findings", len(reasons))
+        mc2.metric("Reject findings", sum(1 for r in reasons if "Reject" in decision or "reject" in r.lower()))
+        mc3.metric("Review flags", sum(1 for r in reasons if "review" in r.lower() or "unclear" in r.lower() or "missing" in r.lower()))
 
-    st.markdown("---")
+        st.markdown("---")
 
-    # ── Findings ──────────────────────────────────────────────────────────────
-    left, right = st.columns([1.1, 1])
+        # ── Findings ──────────────────────────────────────────────────────────────
+        left, right = st.columns([1.1, 1])
 
-    with left:
-        st.markdown("### 📋 Findings")
-        if reasons:
-            cards_html = ""
-            for reason, quote in zip(reasons, quotes):
-                cards_html += _finding_card(reason, quote, decision)
-            st.markdown(cards_html, unsafe_allow_html=True)
-        else:
-            st.success("No issues found — all rules passed.")
+        with left:
+            st.markdown("### 📋 Findings")
+            if reasons:
+                cards_html = ""
+                for reason, quote in zip(reasons, quotes):
+                    cards_html += _finding_card(reason, quote, decision)
+                st.markdown(cards_html, unsafe_allow_html=True)
+            else:
+                st.success("No issues found — all rules passed.")
 
-    # ── Extracted fields ──────────────────────────────────────────────────────
-    with right:
-        if show_fields and doc:
-            st.markdown("### 🔍 Extracted Fields")
-            fields = [
-                ("Supplier name",          doc.supplier_name),
-                ("Item code",              doc.item_code),
-                ("Description",            doc.description),
-                ("Quantity",               doc.quantity),
-                ("Unit",                   doc.unit),
-                ("Unit price (BDT)",       doc.unit_price),
-                ("Line total (BDT)",       doc.line_total),
-                ("Subtotal (BDT)",         doc.subtotal),
-                ("VAT amount (BDT)",       doc.vat_amount),
-                ("VAT shown separately",   doc.vat_shown_separately),
-                ("VAT rate (%)",           doc.vat_rate),
-                ("Total (BDT)",            doc.total),
-                ("TIN",                    doc.tin),
-                ("BIN",                    doc.bin),
-                ("Advance (%)",            doc.advance_percent),
-                ("Payment days",           doc.payment_days_after_delivery),
-                ("Delivery value",         doc.delivery_value),
-                ("Delivery unit",          doc.delivery_unit),
-                ("Has penalty clause",     doc.has_penalty_clause),
-                ("Penalty rate (%/week)",  doc.penalty_percent_per_week),
-                ("Validity (days)",        doc.validity_days),
-            ]
-            rows_html = "".join(_field_row(n, v) for n, v in fields)
-            st.markdown(rows_html, unsafe_allow_html=True)
-            if show_json:
-                st.markdown("### 🧾 Extracted JSON")
-                st.json(doc.model_dump())
-        elif not doc:
-            st.warning("Field extraction failed – document sent to human review.")
+        # ── Extracted fields ──────────────────────────────────────────────────────
+        with right:
+            if show_fields and doc:
+                st.markdown("### 🔍 Extracted Fields")
+                fields = [
+                    ("Supplier name",          doc.supplier_name),
+                    ("Item code",              doc.item_code),
+                    ("Description",            doc.description),
+                    ("Quantity",               doc.quantity),
+                    ("Unit",                   doc.unit),
+                    ("Unit price (BDT)",       doc.unit_price),
+                    ("Line total (BDT)",       doc.line_total),
+                    ("Subtotal (BDT)",         doc.subtotal),
+                    ("VAT amount (BDT)",       doc.vat_amount),
+                    ("VAT shown separately",   doc.vat_shown_separately),
+                    ("VAT rate (%)",           doc.vat_rate),
+                    ("Total (BDT)",            doc.total),
+                    ("TIN",                    doc.tin),
+                    ("BIN",                    doc.bin),
+                    ("Advance (%)",            doc.advance_percent),
+                    ("Payment days",           doc.payment_days_after_delivery),
+                    ("Delivery value",         doc.delivery_value),
+                    ("Delivery unit",          doc.delivery_unit),
+                    ("Has penalty clause",     doc.has_penalty_clause),
+                    ("Penalty rate (%/week)",  doc.penalty_percent_per_week),
+                    ("Validity (days)",        doc.validity_days),
+                ]
+                rows_html = "".join(_field_row(n, v) for n, v in fields)
+                st.markdown(rows_html, unsafe_allow_html=True)
+                if show_json:
+                    st.markdown("### 🧾 Extracted JSON")
+                    st.json(doc.model_dump())
+            elif not doc:
+                st.warning("Field extraction failed – document sent to human review.")
 
-    # ── Raw text ──────────────────────────────────────────────────────────────
-    if show_raw:
-        with st.expander("📄 Raw PDF text"):
-            st.code(result.get("text", ""), language=None)
+        # ── Raw text ──────────────────────────────────────────────────────────────
+        if show_raw:
+            with st.expander("📄 Raw PDF text"):
+                st.code(result.get("text", ""), language=None)
 
 else:
     # Empty state

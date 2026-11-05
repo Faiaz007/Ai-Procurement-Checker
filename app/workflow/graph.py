@@ -3,7 +3,7 @@ LangGraph workflow for supplier document checking.
 
 Nodes
 -----
-extract      – read PDF and call Gemini; produces SupplierDoc or None.
+extract      – read PDF and call Groq; produces SupplierDoc or None.
 verify       – check all quotes appear verbatim in the PDF text.
 decide       – apply company rules.
 human_review – named terminal node for documents that need a person.

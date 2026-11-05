@@ -89,7 +89,7 @@ or open a review queue item.
 ```python
 # OLD — broken 4 ways
 import google.generativeai as genai          # deprecated SDK
-model = genai.GenerativeModel("gemini-1.5-flash")  # retired model
+model = genai.GenerativeModel("Groq-1.5-flash")  # retired model
 resp = model.generate_content(SYSTEM + text)
 data = json.loads(resp.text)                 # crashes on ```json ... ```
 doc = SupplierDoc(**data)                    # crashes on wrong types
@@ -103,7 +103,7 @@ from google import genai
 from google.genai import types
 
 resp = client.models.generate_content(
-    model=os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"),
+    model=os.environ.get("Groq_MODEL", "Groq-2.0-flash"),
     contents=f"<document>\n{text}\n</document>",
     config=types.GenerateContentConfig(
         system_instruction=SYSTEM_INSTRUCTION,
@@ -121,7 +121,7 @@ For extraction (not creative writing) this means consistent, repeatable results.
 **`response_mime_type="application/json"`** – the model is forbidden from wrapping
 its answer in markdown fences. `resp.text` is always a raw JSON string.
 
-**`response_schema=SupplierDoc`** – Gemini reads the Pydantic model's JSON schema
+**`response_schema=SupplierDoc`** – Groq reads the Pydantic model's JSON schema
 and constrains its output to match. Field names, types (`str | null`, `float | null`, etc.)
 are all enforced by the model's constrained decoding, not by post-hoc parsing.
 
@@ -171,7 +171,7 @@ The schema's `Field(description=...)` annotations reinforce this at the type lev
 ### Theory
 
 Pydantic v2 models are both a **validation layer** and a **documentation layer**.
-When used as a `response_schema`, Gemini reads the model's JSON schema —
+When used as a `response_schema`, Groq reads the model's JSON schema —
 including field descriptions — to guide its output.
 
 ### The delivery split
@@ -581,7 +581,7 @@ That is a complete, working Streamlit UI — about 30 lines.
 ### Long term (weeks)
 
 - **Fine-tune a small model** (Gemma 3 or Qwen 2.5) on validated extractions to remove
-  the Gemini API dependency for privacy-sensitive deployments.
+  the Groq API dependency for privacy-sensitive deployments.
 - **Multi-language support** — many supplier documents in Bangladesh are mixed Bangla/English.
   The extraction prompt and schema would need Bangla-aware field descriptions.
 - **Confidence scores** — use log-probabilities or ensemble multiple calls to estimate

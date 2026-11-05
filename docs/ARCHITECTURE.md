@@ -8,7 +8,7 @@ It never runs an agent "freely" — every step is a named node with a fixed resp
 ```mermaid
 flowchart TD
     A([📄 Supplier PDF]) --> B[1. Ingestion\nPyMuPDF extracts raw text]
-    B --> C[2. Extraction\nGemini 2.0 Flash — structured JSON]
+    B --> C[2. Extraction\nGroq 2.0 Flash — structured JSON]
     C -->|SupplierDoc| D[3. Verification\nQuote strings found in PDF?]
     C -->|None — extraction failed| HR([🚨 Human Review Stop])
     D -->|All quotes verified| E[4. Rule Engine\ndecide.py applies company rules]
@@ -61,7 +61,7 @@ flowchart LR
 
     subgraph extraction["app/extraction"]
         SC["schema.py\nPydantic SupplierDoc"]
-        EX["extract.py\nGemini client + retries"]
+        EX["extract.py\nGroq client + retries"]
         EX --> SC
     end
 
@@ -95,7 +95,7 @@ sequenceDiagram
     participant G as graph.py
     participant E as extract.py
     participant P as pdf_reader.py
-    participant M as Gemini API
+    participant M as Groq API
 
     G->>E: extract_fields(pdf_path)
     E->>P: read_pdf_text(path)
@@ -115,7 +115,7 @@ sequenceDiagram
 ```
 
 **Why JSON mode + response_schema?**
-Gemini's `response_mime_type="application/json"` forces the model to output valid JSON.
+Groq's `response_mime_type="application/json"` forces the model to output valid JSON.
 Passing `response_schema=SupplierDoc` additionally constrains the JSON to match the
 Pydantic model's shape — field names, types, nullability — so `model_validate_json`
 never fails due to a structural mismatch.
@@ -166,9 +166,9 @@ flowchart TD
 ```mermaid
 flowchart LR
     PDF[(supplier-pack-N.pdf)] -->|bytes| MuPDF[PyMuPDF]
-    MuPDF -->|plain text| Gemini[Gemini 2.0 Flash]
+    MuPDF -->|plain text| Groq[Groq 2.0 Flash]
     CSV[(purchase-request.csv)] -->|max_price, qty| RuleEngine[Rule Engine]
-    Gemini -->|SupplierDoc JSON| QuoteVerifier[Quote Verifier]
+    Groq -->|SupplierDoc JSON| QuoteVerifier[Quote Verifier]
     QuoteVerifier -->|verified doc| RuleEngine
     RuleEngine -->|decision + reasons| Output["results.md / stdout / UI"]
 ```
@@ -181,7 +181,7 @@ flowchart LR
 flowchart TD
     A[PDF path] --> B{PDF readable?}
     B -->|No - exception| C[main.py catch: Needs a person]
-    B -->|Yes| D{Gemini responds OK?}
+    B -->|Yes| D{Groq responds OK?}
     D -->|All 3 retries fail| E[extract returns None: Needs a person]
     D -->|Success| F{Quotes found in PDF text?}
     F -->|Mismatch| G[verify node: Needs a person]
@@ -202,7 +202,7 @@ Ai_Procuremnet_project/
 │   ├── main.py                  ← CLI entry point
 │   ├── extraction/
 │   │   ├── schema.py            ← Pydantic SupplierDoc model
-│   │   └── extract.py           ← Gemini client, retries, JSON mode
+│   │   └── extract.py           ← Groq client, retries, JSON mode
 │   ├── ingestion/
 │   │   └── pdf_reader.py        ← PyMuPDF wrapper
 │   ├── rules/
@@ -223,9 +223,10 @@ Ai_Procuremnet_project/
 ├── .env / .env.example
 ├── requirements.txt
 ├── README.md
-├── NOTE.md
-├── ARCHITECTURE.md              ← this file
-└── IMPLEMENTATION_GUIDE.md
+├── docs/
+│   ├── NOTE.md
+│   ├── ARCHITECTURE.md              ← this file
+│   └── IMPLEMENTATION_GUIDE.md
 ```
 
 ---
@@ -235,8 +236,8 @@ Ai_Procuremnet_project/
 | Technology | Role | Why chosen |
 |---|---|---|
 | **LangGraph** | Orchestration | Enforces fixed node order; state is explicit; nodes are auditable |
-| **Gemini 2.0 Flash** | Field extraction | Fast, cheap, current model; supports JSON mode + response_schema |
-| **google-genai SDK** | Gemini client | Current SDK; `google-generativeai` is deprecated |
+| **Groq 2.0 Flash** | Field extraction | Fast, cheap, current model; supports JSON mode + response_schema |
+| **google-genai SDK** | Groq client | Current SDK; `google-generativeai` is deprecated |
 | **Pydantic v2** | Schema + validation | `model_validate_json` + `model_json_schema` = zero boilerplate |
 | **PyMuPDF** | PDF reading | Fast, no system deps; returns clean per-page text |
 | **Decimal** | Price arithmetic | Avoids IEEE 754 rounding errors at the 3% price boundary |
@@ -251,7 +252,7 @@ flowchart TD
     subgraph local["Local / Server"]
         CLI["python -m app.main"] --> GR[LangGraph Graph]
         ST["Streamlit UI\nui/app.py"] --> GR
-        GR --> GEMINI["Gemini API\nexternal HTTPS"]
+        GR --> Groq["Groq API\nexternal HTTPS"]
         GR --> FS["Local filesystem\nPDFs, outputs/"]
     end
 

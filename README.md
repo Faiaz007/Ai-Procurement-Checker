@@ -10,7 +10,7 @@ Built for BIAI AI Engineer Round 2 (Task 1).
 ## How it works
 
 ```
-PDF ──► [Extract fields via Gemini]
+PDF ──► [Extract fields via Groq]
            │
            ▼
        [Verify quotes in PDF text]
@@ -135,4 +135,4 @@ results.md           Accuracy table + confusion matrix (created by evaluate.py)
 
 ## What does not work well / what I would do next
 
-See [NOTE.md](NOTE.md).
+See [NOTE.md](docs/NOTE.md).
